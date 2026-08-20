@@ -8,6 +8,7 @@ const pool = require("./src/models/db");
 const app = express();
 
 const authRoutes = require("./src/routes/auth");
+const complaintRoutes = require("./src/routes/complaints");
 
 app.use(cors());
 app.use(express.json());
@@ -36,6 +37,7 @@ app.get("/db-test", async (req, res) => {
         });
     }
 });
+app.use("/complaints", complaintRoutes);
 
 const PORT = process.env.PORT || 5000;
 
