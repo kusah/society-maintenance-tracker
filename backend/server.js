@@ -9,8 +9,12 @@ const app = express();
 
 const authRoutes = require("./src/routes/auth");
 const complaintRoutes = require("./src/routes/complaints");
-
+const adminComplaintRoutes = require("./src/routes/adminComplaints");
 const path = require("path");
+
+const noticeRoutes = require("./src/routes/notices");
+
+const dashboardRoutes = require("./src/routes/dashboard");
 
 app.use(cors());
 app.use(express.json());
@@ -42,6 +46,9 @@ app.get("/db-test", async (req, res) => {
 app.use("/complaints", complaintRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+app.use("/admin/complaints", adminComplaintRoutes);
+app.use("/notices", noticeRoutes);
+app.use("/admin/dashboard", dashboardRoutes);
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
