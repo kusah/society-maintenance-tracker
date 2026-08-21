@@ -19,7 +19,9 @@ const createComplaint = async (req, res) => {
         }
 
         // Photo upload will be added later
-        const photoUrl = null;
+        const photoUrl = req.file
+            ? `/uploads/${req.file.filename}`
+            : null;
 
         // Create complaint
         const complaintResult = await pool.query(

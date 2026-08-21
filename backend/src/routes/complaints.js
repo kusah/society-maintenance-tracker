@@ -12,11 +12,12 @@ const {
 } = require("../middleware/auth");
 
 const router = express.Router();
-
+const upload = require("../middleware/upload");
 router.post(
     "/",
     requireAuth,
     requireRole("resident"),
+    upload.single("photo"),
     createComplaint
 );
 

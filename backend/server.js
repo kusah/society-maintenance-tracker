@@ -10,6 +10,8 @@ const app = express();
 const authRoutes = require("./src/routes/auth");
 const complaintRoutes = require("./src/routes/complaints");
 
+const path = require("path");
+
 app.use(cors());
 app.use(express.json());
 
@@ -38,6 +40,7 @@ app.get("/db-test", async (req, res) => {
     }
 });
 app.use("/complaints", complaintRoutes);
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const PORT = process.env.PORT || 5000;
 
