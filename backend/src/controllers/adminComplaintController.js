@@ -1,8 +1,16 @@
 const pool = require("../models/db");
 
+const {
+    sendStatusChangeEmail
+} = require("../utils/email");
+
 const getAllComplaints = async (req, res) => {
     try {
         const { category, status, date } = req.query;
+
+        const overdueHours = Number(
+            process.env.COMPLAINT_OVERDUE_HOURS || 48
+        );
 
         let query = `
             SELECT
@@ -17,35 +25,54 @@ const getAllComplaints = async (req, res) => {
                 c.priority,
                 c.status,
                 c.created_at,
-                c.resolved_at
+                c.resolved_at,
+
+                CASE
+                    WHEN c.status != 'Resolved'
+                         AND c.created_at < NOW() -
+                             ($1 * INTERVAL '1 hour')
+                    THEN true
+                    ELSE false
+                END AS is_overdue
+
             FROM complaints c
             JOIN users u
                 ON c.resident_id = u.id
         `;
 
         const conditions = [];
-        const values = [];
+        const values = [overdueHours];
 
         if (category) {
             values.push(category);
-            conditions.push(`c.category = $${values.length}`);
+            conditions.push(
+                `c.category = $${values.length}`
+            );
         }
 
         if (status) {
             values.push(status);
-            conditions.push(`c.status = $${values.length}`);
+            conditions.push(
+                `c.status = $${values.length}`
+            );
         }
 
         if (date) {
             values.push(date);
-            conditions.push(`DATE(c.created_at) = $${values.length}`);
+            conditions.push(
+                `DATE(c.created_at) = $${values.length}`
+            );
         }
 
         if (conditions.length > 0) {
             query += " WHERE " + conditions.join(" AND ");
         }
 
-        query += " ORDER BY c.created_at DESC";
+        query += `
+            ORDER BY
+                is_overdue DESC,
+                c.created_at DESC
+        `;
 
         const result = await pool.query(query, values);
 
@@ -54,7 +81,10 @@ const getAllComplaints = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Get all complaints error:", error);
+        console.error(
+            "Get all complaints error:",
+            error
+        );
 
         res.status(500).json({
             message: "Server error while fetching complaints"
@@ -137,19 +167,47 @@ const updateComplaint = async (req, res) => {
 
         // Record status change in history
         if (newStatus !== existingComplaint.status) {
-            await pool.query(
-                `INSERT INTO complaint_status_history
-                (complaint_id, old_status, new_status, changed_by, note)
-                VALUES ($1, $2, $3, $4, $5)`,
-                [
-                    complaintId,
-                    existingComplaint.status,
-                    newStatus,
-                    req.user.id,
-                    note || null
-                ]
+    await pool.query(
+        `INSERT INTO complaint_status_history
+        (complaint_id, old_status, new_status, changed_by, note)
+        VALUES ($1, $2, $3, $4, $5)`,
+        [
+            complaintId,
+            existingComplaint.status,
+            newStatus,
+            req.user.id,
+            note || null
+        ]
+    );
+
+    // Send email to resident
+    try {
+        const residentResult = await pool.query(
+            `SELECT name, email
+             FROM users
+             WHERE id = $1`,
+            [existingComplaint.resident_id]
+        );
+
+        if (residentResult.rows.length > 0) {
+            const resident = residentResult.rows[0];
+
+            await sendStatusChangeEmail(
+                resident.email,
+                resident.name,
+                complaintId,
+                existingComplaint.status,
+                newStatus,
+                note
             );
         }
+    } catch (emailError) {
+        console.error(
+            "Status change email failed:",
+            emailError.message
+        );
+    }
+}
 
         res.json({
             message: "Complaint updated successfully",
@@ -183,6 +241,15 @@ const getOverdueComplaints = async (req, res) => {
                 c.status,
                 c.created_at,
                 c.resolved_at,
+
+CASE
+    WHEN c.status != 'Resolved'
+         AND c.created_at < NOW() - (
+             $${values.length + 1} * INTERVAL '1 hour'
+         )
+    THEN true
+    ELSE false
+END AS is_overdue,
                 NOW() - c.created_at AS age
              FROM complaints c
              JOIN users u

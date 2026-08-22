@@ -11,6 +11,12 @@ const {
 } = require("../middleware/auth");
 
 const router = express.Router();
+router.get(
+    "/",
+    requireAuth,
+    requireRole("admin"),
+    getAllComplaints
+);
 
 router.get(
     "/overdue",

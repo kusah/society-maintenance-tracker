@@ -28,6 +28,14 @@ const getDashboardStats = async (req, res) => {
                 )::int AS overdue
             FROM complaints
         `, [overdueHours]);
+        const categoryResult = await pool.query(`
+                SELECT
+                category,
+                COUNT(*)::int AS total
+            FROM complaints
+            GROUP BY category
+            ORDER BY total DESC
+`);
 
         const noticesResult = await pool.query(`
             SELECT COUNT(*)::int AS total
@@ -35,11 +43,11 @@ const getDashboardStats = async (req, res) => {
         `);
 
         res.json({
-            complaints: complaintsResult.rows[0],
-            notices: noticesResult.rows[0],
-            overdue_hours: overdueHours
-        });
-
+    complaints: complaintsResult.rows[0],
+    by_category: categoryResult.rows,
+    notices: noticesResult.rows[0],
+    overdue_hours: overdueHours
+});
     } catch (error) {
         console.error("Dashboard stats error:", error);
 

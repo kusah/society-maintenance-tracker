@@ -78,7 +78,7 @@ const getNotices = async (req, res) => {
              FROM notices n
              JOIN users u
                 ON n.posted_by = u.id
-             ORDER BY n.created_at DESC`
+             ORDER BY n.is_important DESC, n.created_at DESC`
         );
 
         res.json({
