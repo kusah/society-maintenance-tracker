@@ -28,6 +28,7 @@ const AdminDashboard = () => {
     const [noticeImportant, setNoticeImportant] = useState(false);
     const [noticeMessage, setNoticeMessage] = useState("");
     const [noticeError, setNoticeError] = useState("");
+    const [dateFilter, setDateFilter] = useState("");
 
     const fetchAdminDashboard = async () => {
         try {
@@ -195,10 +196,15 @@ const AdminDashboard = () => {
         priorityFilter === "All" ||
         complaint.priority === priorityFilter;
 
+    const dateMatch =
+        !dateFilter ||
+    complaint.created_at.slice(0, 10) === dateFilter;
+
     return (
         statusMatch &&
         categoryMatch &&
-        priorityMatch
+        priorityMatch &&
+        dateMatch
         );
     });
     return (
@@ -455,6 +461,25 @@ const AdminDashboard = () => {
             High
         </option>
     </select>
+
+    <label>
+    Date:
+</label>
+
+<input
+    type="date"
+    value={dateFilter}
+    onChange={(e) =>
+        setDateFilter(e.target.value)
+    }
+/>
+
+<button
+    type="button"
+    onClick={() => setDateFilter("")}
+>
+    Clear Date
+</button>
 </div>
 
             {filteredComplaints.length === 0 ? (

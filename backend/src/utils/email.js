@@ -1,18 +1,36 @@
 const sendEmail = async (to, subject, text) => {
     try {
-        const response = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-                "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                from: process.env.EMAIL_FROM,
-                to: [to],
-                subject,
-                text
-            })
-        });
+        // Skip placeholder/demo emails
+        const demoEmails = (process.env.DEMO_EMAILS || "")
+            .split(",")
+            .map(email => email.trim().toLowerCase())
+            .filter(Boolean);
+
+        if (demoEmails.includes(to.toLowerCase())) {
+            console.log(`Demo email skipped for ${to}`);
+            return {
+                skipped: true,
+                reason: "Demo email address"
+            };
+        }
+
+        const response = await fetch(
+            "https://api.resend.com/emails",
+            {
+                method: "POST",
+                headers: {
+                    "Authorization":
+                        `Bearer ${process.env.RESEND_API_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    from: process.env.EMAIL_FROM,
+                    to: [to],
+                    subject,
+                    text
+                })
+            }
+        );
 
         const data = await response.json();
 
@@ -22,7 +40,9 @@ const sendEmail = async (to, subject, text) => {
             );
         }
 
-        console.log(`Email sent successfully to ${to}`);
+        console.log(
+            `Email sent successfully to ${to}`
+        );
 
         return data;
 
